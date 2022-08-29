@@ -86,7 +86,7 @@ class Model:
 
                 lowest_loss = test_loss
 
-                torch.save(self.state_dict, model_dir)
+                torch.save(self.state_dict(), model_dir)
 
 
                 print('------------CHECKPOINT----------')
