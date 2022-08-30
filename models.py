@@ -37,7 +37,9 @@ class Model:
             for x, y in trainloader:
                 p = self.__call__(*x)
 
+
                 loss = lossfn(p, y)
+
 
                 loss.backward()
 
@@ -82,7 +84,7 @@ class Model:
 
             if test_loss < lowest_loss:
                 
-                print(f'EPOCH : {epoch+1} TRAIN-LOSS : {train_loss} TEST-LOSS : {test_loss}')
+                print(f'EPOCH : {epoch+1} TRAIN-LOSS : {train_loss :.3f} TEST-LOSS : {test_loss :.3f}')
 
                 lowest_loss = test_loss
 
@@ -106,9 +108,9 @@ class UserMovieModel(nn.Module, Model):
         self.user_embed = nn.Embedding(no_users, user_embed_dim)
         self.movie_embed = nn.Embedding(no_movies, movie_embed_dim)
 
-        self.fc1 = nn.Linear(user_embed_dim+movie_embed_dim, 50)
-        self.fc2 = nn.Linear(50, 10)
-        self.fc3 = nn.Linear(10, 1)
+        self.fc1 = nn.Linear(user_embed_dim+movie_embed_dim, 100)
+        self.fc2 = nn.Linear(100, 50)
+        self.fc3 = nn.Linear(50, 1)
 
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
