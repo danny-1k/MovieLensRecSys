@@ -46,7 +46,7 @@ class Model:
 
             for x, y in trainloader:
 
-                x = x.to(device)
+                x = [x_i.to(device) for x_i in x]
                 y = y.to(device)
 
                 p = self.__call__(*x)
@@ -67,7 +67,7 @@ class Model:
             with torch.no_grad():
                 for x, y in testloader:
 
-                    x = x.to(device)
+                    x = [x_i.to(device) for x_i in x]
                     y = y.to(device)
 
                     p = self.__call__(*x)
