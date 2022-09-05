@@ -19,11 +19,22 @@ class Model:
     def __call__(self):
         pass
 
+
+    def get_device(self):
+        return 'cuda' if torch.cuda.is_available() else 'cpu'
+
     def fit(self, epochs,lossfn, optimizer, trainloader, testloader, plot_dir, model_dir):
 
         print('Started Training')
 
-        
+        device = self.get_device()
+
+        self.to(device)
+
+        if device == 'cuda':
+            print('Using GPU')
+
+
         train_loss_over_time = []
         test_loss_over_time = []
 
@@ -35,6 +46,10 @@ class Model:
             test_loss_epoch = []
 
             for x, y in trainloader:
+
+                x = x.to(device)
+                y = y.to(device)
+
                 p = self.__call__(*x)
 
 
@@ -52,6 +67,10 @@ class Model:
 
             with torch.no_grad():
                 for x, y in testloader:
+
+                    x = x.to(device)
+                    y = y.to(device)
+
                     p = self.__call__(*x)
 
                     loss = lossfn(p, y)
@@ -96,7 +115,7 @@ class Model:
 
 
 class UserMovieModel(nn.Module, Model):
-    def __init__(self, no_users, no_movies, user_embed_dim, movie_embed_dim):
+    def __init__(self, no_users, no_movies, user_embed_dim, movie_embed_dim, hidden_dim=100):
         super().__init__()
 
         self.no_users = no_users
@@ -108,9 +127,10 @@ class UserMovieModel(nn.Module, Model):
         self.user_embed = nn.Embedding(no_users, user_embed_dim)
         self.movie_embed = nn.Embedding(no_movies, movie_embed_dim)
 
-        self.fc1 = nn.Linear(user_embed_dim+movie_embed_dim, 100)
-        self.fc2 = nn.Linear(100, 50)
-        self.fc3 = nn.Linear(50, 1)
+        self.hidden_dim = hidden_dim
+
+        self.fc1 = nn.Linear(user_embed_dim+movie_embed_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, 1)
 
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
@@ -126,9 +146,7 @@ class UserMovieModel(nn.Module, Model):
         x = self.relu(x)
 
         x = self.fc2(x)
-        x = self.relu(x)
 
-        x = self.fc3(x)
         x = self.sigmoid(x)
 
 
