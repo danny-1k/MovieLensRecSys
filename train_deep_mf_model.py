@@ -7,14 +7,14 @@ from data import UserMovieRatings
 from models import UserMovieModel
 
 
-trainloader = DataLoader(UserMovieRatings(), batch_size=64, shuffle=True)
-testloader = DataLoader(UserMovieRatings(False), batch_size=64, shuffle=True)
+trainloader = DataLoader(UserMovieRatings(), batch_size=256, shuffle=True)
+testloader = DataLoader(UserMovieRatings(False), batch_size=256, shuffle=True)
 
 no_users = 138493
 no_movies = 131262
 
-user_embed_dim = 25
-movie_embed_dim = 30
+user_embed_dim = 50
+movie_embed_dim = 50
 
 # One beauty of Deep Matrix Factorization is that the embeddings of 
 # say the users and movies don't need to be of the same dimensions because we're not working
