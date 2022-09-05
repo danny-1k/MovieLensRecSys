@@ -126,8 +126,6 @@ def train(net, epochs, optimizer, lossfn, trainloader, testloader):
 
         print(f'EPOCH : {epoch+1} TRAIN LOSS : {train_loss_over_time[-1]} TEST LOSS : {test_loss_over_time[-1]} (TRAIN-TEST)% : {-((train_loss_over_time[-1]-test_loss_over_time[-1])/test_loss_over_time[-1])*100 :.2f}')
 
-        # if average_test_loss <.25:
-        #     break
 
 
     return train_loss_over_time, test_loss_over_time
