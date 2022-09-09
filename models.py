@@ -22,20 +22,29 @@ class Model:
     def get_device(self):
         return 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    def fit(self, epochs,lossfn, optimizer, trainloader, testloader, plot_dir, model_dir):
+    def fit(self, epochs,lossfn, optimizer, trainloader, testloader, plot_dir=None, model_dir=None, verbosity=0):
 
-        print('Started Training')
+        if not verbosity == -1:
+            print('Started Training')
 
         device = self.get_device()
 
         self.to(device)
 
-        if device == 'cuda':
-            print('Using GPU')
+
+        if not verbosity == -1:
+
+            if device == 'cuda':
+                print('Using GPU')
+            else:
+                if verbosity == 1:
+                    print('Using CPU')
 
 
-        train_loss_over_time = []
-        test_loss_over_time = []
+
+
+        self.train_loss_over_time = []
+        self.test_loss_over_time = []
 
         lowest_loss = float('inf')
         
@@ -83,33 +92,45 @@ class Model:
             train_loss = sum(train_loss_epoch)/len(train_loss_epoch)
             test_loss = sum(test_loss_epoch)/len(test_loss_epoch)
 
-            train_loss_over_time.append(train_loss)
-            test_loss_over_time.append(test_loss)
+            self.train_loss_over_time.append(train_loss)
+            self.test_loss_over_time.append(test_loss)
 
 
-            plt.title('Train & Test Loss Over Time')
-            plt.xlabel('Epochs')
-            plt.ylabel('Loss')
+            if plot_dir:
 
-            plt.plot(train_loss_over_time, label='Train Loss')
-            plt.plot(test_loss_over_time, label='Test Loss')
 
-            plt.legend()
+                plt.title('Train & Test Loss Over Time')
+                plt.xlabel('Epochs')
+                plt.ylabel('Loss')
 
-            plt.savefig(plot_dir)
-            plt.close('all')
+                plt.plot(self.train_loss_over_time, label='Train Loss')
+                plt.plot(self.test_loss_over_time, label='Test Loss')
+
+                plt.legend()
+
+                plt.savefig(plot_dir)
+                plt.close('all')
 
 
             if test_loss < lowest_loss:
+
+                if not verbosity == -1:
                 
-                print(f'EPOCH : {epoch+1} TRAIN-LOSS : {train_loss :.3f} TEST-LOSS : {test_loss :.3f}')
+                    print(f'EPOCH : {epoch+1} TRAIN-LOSS : {train_loss :.3f} TEST-LOSS : {test_loss :.3f}')
 
                 lowest_loss = test_loss
 
-                torch.save(self.state_dict(), model_dir)
+                if model_dir:
 
+                    torch.save(self.state_dict(), model_dir)
 
-                print('------------CHECKPOINT----------')
+                if not verbosity == -1:
+
+                    print('------------CHECKPOINT----------')
+            
+            if verbosity == 1:
+                print(f'EPOCH : {epoch+1} TRAIN-LOSS : {train_loss :.3f} TEST-LOSS : {test_loss :.3f}')
+
 
 
 
@@ -151,3 +172,46 @@ class UserMovieModel(nn.Module, Model):
 
         return x
 
+
+
+class UserMovieCategeoryModel(nn.Module, Model):
+    def __init__(self, no_users, no_movies, no_categories, user_embed_dim, movie_embed_dim, category_embed_dim, hidden_dim=100):
+        super().__init__()
+
+        self.no_users = no_users
+        self.no_movies = no_movies
+        self.no_categories = no_categories
+
+        self.user_embed_dim = user_embed_dim
+        self.movie_embed_dim = movie_embed_dim
+        self.category_embed_dim = category_embed_dim
+
+        self.user_embed = nn.Embedding(no_users, user_embed_dim)
+        self.movie_embed = nn.Embedding(no_movies, movie_embed_dim)
+        self.category_embed = nn.Embedding(no_categories, category_embed_dim)
+
+        self.hidden_dim = hidden_dim
+
+        self.fc1 = nn.Linear(user_embed_dim+movie_embed_dim+category_embed_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, 1)
+
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
+
+    
+    def forward(self, x1, x2, x3):
+        x1 = self.user_embed(x1)
+        x2 = self.movie_embed(x2)
+        x3 = self.category_embed(x3)
+
+        x = torch.cat([x1, x2, x3], axis=1)
+
+        x = self.fc1(x)
+        x = self.relu(x)
+
+        x = self.fc2(x)
+
+        x = self.sigmoid(x)
+
+
+        return x
