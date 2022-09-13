@@ -284,7 +284,63 @@ class UserMovieModelImplicit(nn.Module, Model):
         by `user_ids`.
         """
 
-        negative_items = torch.randint(0, self.no_movies, user_ids.shape)
+        negative_items = torch.randint(0, self.no_movies, user_ids.shape).to(self.device)
 
         return self.__call__(user_ids, negative_items)
+
+    
+    def handle_trainloader(self, trainloader, train_loss_epoch, optimizer, lossfn):
+        for x in trainloader:
+
+            loss = self.one_pass_trainloader(x, lossfn)
+
+            loss.backward()
+
+            optimizer.step()
+
+            optimizer.zero_grad()
+
+            train_loss_epoch.append(loss.item())
+
+    
+    def handle_testloader(self, testloader, test_loss_epoch, lossfn):
+        with torch.no_grad():
+            for x in testloader:
+
+                loss = self.one_pass_testloader(x, lossfn)
+
+                test_loss_epoch.append(loss.item())
+
+
+    def one_pass_trainloader(self, x, lossfn):
+
+        user_ids = x[0].to(self.device)
+        movie_ids = x[1].to(self.device)
+
+
+        positive = self.__call__(user_ids, movie_ids)
+
+        negative = self.negative_sample_pred(user_ids)
+
+
+        loss = lossfn(positive, negative)
+
+
+        return loss
+
+
+    def one_pass_testloader(self, x, lossfn):
+
+        user_ids = x[0].to(self.device)
+        movie_ids = x[1].to(self.device)
+
+
+        positive = self.__call__(user_ids, movie_ids)
+
+        negative = self.negative_sample_pred(user_ids)
+
+
+        loss = lossfn(positive, negative)
+
+        return loss
 
