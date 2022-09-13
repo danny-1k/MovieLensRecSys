@@ -37,7 +37,7 @@ class UserMovieRatings(Dataset):
 
         else:
 
-            return [(x1, x2)]
+            return (x1, x2)
 
 
 class UserMovieCategoriesRatings(Dataset):
@@ -80,5 +80,5 @@ class UserMovieCategoriesRatings(Dataset):
 
         else:
 
-            return [(x1,x2,x3)]
+            return (x1,x2,x3)
 
