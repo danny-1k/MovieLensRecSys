@@ -18,9 +18,59 @@ class Model:
     def __call__(self):
         pass
 
-
     def get_device(self):
         return 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
+    def handle_trainloader(self, trainloader, train_loss_epoch, optimizer, lossfn):
+        for x, y in trainloader:
+
+            loss = self.one_pass_trainloader(x, y, lossfn)
+
+            loss.backward()
+
+            optimizer.step()
+
+            optimizer.zero_grad()
+
+            train_loss_epoch.append(loss.item())
+
+    
+    def handle_testloader(self, testloader, test_loss_epoch, lossfn):
+        with torch.no_grad():
+            for x, y in testloader:
+
+                loss = self.one_pass_testloader(x, y, lossfn)
+
+                test_loss_epoch.append(loss.item())
+
+
+    def one_pass_trainloader(self, x, y, lossfn):
+
+        x = [x_i.to(self.device) for x_i in x] if type(x) == list else x.to(self.device)
+        y = y.to(self.device)
+
+        p = self.__call__(*x)
+
+
+        loss = lossfn(p, y)
+
+        return loss
+
+
+    def one_pass_testloader(self, x, y, lossfn):
+
+        x = [x_i.to(self.device) for x_i in x] if type(x) == list else x.to(self.device)
+        y = y.to(self.device)
+
+        p = self.__call__(*x)
+
+
+        loss = lossfn(p, y)
+
+        return loss
+
+
 
     def fit(self, epochs,lossfn, optimizer, trainloader, testloader, plot_dir=None, model_dir=None, verbosity=0):
 
@@ -28,6 +78,7 @@ class Model:
             print('Started Training')
 
         device = self.get_device()
+        self.device = device
 
         self.to(device)
 
@@ -53,42 +104,12 @@ class Model:
             train_loss_epoch = []
             test_loss_epoch = []
 
-            for x, y in trainloader:
 
-                x = [x_i.to(device) for x_i in x]
-                y = y.to(device)
+            self.handle_trainloader(trainloader, train_loss_epoch, optimizer, lossfn)
 
-                p = self.__call__(*x)
+            self.handle_testloader(testloader, test_loss_epoch, lossfn)
 
-
-                loss = lossfn(p, y)
-
-
-                loss.backward()
-
-                optimizer.step()
-
-                optimizer.zero_grad()
-
-                train_loss_epoch.append(loss.item())
-
-
-            with torch.no_grad():
-                for x, y in testloader:
-
-                    x = [x_i.to(device) for x_i in x]
-                    y = y.to(device)
-
-                    p = self.__call__(*x)
-
-                    loss = lossfn(p, y)
-
-                    train_loss_epoch.append(loss.item())
                 
-                
-                test_loss_epoch.append(loss.item())
-
-
             train_loss = sum(train_loss_epoch)/len(train_loss_epoch)
             test_loss = sum(test_loss_epoch)/len(test_loss_epoch)
 
@@ -215,3 +236,55 @@ class UserMovieCategeoryModel(nn.Module, Model):
 
 
         return x
+
+
+class UserMovieModelImplicit(nn.Module, Model):
+    def __init__(self, no_users, no_movies, user_embed_dim, movie_embed_dim, hidden_dim=100):
+        super().__init__()
+
+        self.no_users = no_users
+        self.no_movies = no_movies
+
+        self.user_embed_dim = user_embed_dim
+        self.movie_embed_dim = movie_embed_dim
+
+        self.user_embed = nn.Embedding(no_users, user_embed_dim)
+        self.movie_embed = nn.Embedding(no_movies, movie_embed_dim)
+
+        self.hidden_dim = hidden_dim
+
+        self.fc1 = nn.Linear(user_embed_dim+movie_embed_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, 1)
+
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
+
+    
+    def forward(self, x1, x2):
+        x1 = self.user_embed(x1)
+        x2 = self.movie_embed(x2)
+
+        x = torch.cat([x1, x2], axis=1)
+
+        x = self.fc1(x)
+        x = self.relu(x)
+
+        x = self.fc2(x)
+
+        x = self.sigmoid(x)
+
+
+        return x
+
+
+    def negative_sample_pred(self, user_ids):
+
+        """Randomly sample the items with hope that a significant percent of
+        the sampled items have not been interacted with by the users represented
+        by `user_ids`.
+        """
+
+        negative_items = torch.randint(0, self.no_movies, user_ids.shape)
+
+        return self.__call__(user_ids, negative_items)
+
